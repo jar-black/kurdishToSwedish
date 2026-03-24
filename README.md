@@ -32,6 +32,7 @@ Kurdish Sorani poem
 kurdishToSwedish/
 ├── data/
 │   ├── collect_opus.py          # Download OPUS ckb↔swe parallel sentences
+│   ├── collect_pivot.py         # Download ckb↔en, pivot-translate en→swe via NLLB
 │   ├── generate_synthetic.py    # Use Claude API to create poetry pairs
 │   └── preprocess.py            # Clean, deduplicate, train/val/test split
 ├── training/
@@ -93,7 +94,36 @@ Prompts Claude to:
 
 Expected yield: **500+ high-quality poetry pairs** in ~1 hour.
 
-#### 1c. Manual / Scraped Poetry (manual effort)
+#### 1c. Pivot Translation via English (automated)
+```bash
+python data/collect_pivot.py --n_pairs 5000
+```
+Kurdish Sorani ↔ English has far more parallel data than Kurdish ↔ Swedish
+directly. This script:
+1. Downloads all available `ckb`↔`en` sentence pairs from OPUS (CCAligned,
+   WikiMatrix, FLORES-200, TED2020, etc.).
+2. Pivot-translates the English side to Swedish using the off-the-shelf
+   `facebook/nllb-200-distilled-600M` model (no GPU required, but much faster
+   with one).
+3. Saves `data/raw/pivot_ckb_swe.jsonl` — picked up automatically by
+   `preprocess.py`.
+
+Expected yield: **1 000–20 000 additional ckb↔swe pairs** (labelled
+`source=pivot-en/<corpus>`). Quality is lower than direct translations, so
+these pairs supplement rather than replace synthetic or manual data.
+
+```bash
+# CPU-only quick test (500 pairs):
+python data/collect_pivot.py --n_pairs 500 --device cpu
+
+# GPU, all available pairs:
+python data/collect_pivot.py
+
+# Only download raw ckb↔en without translating:
+python data/collect_pivot.py --download_only
+```
+
+#### 1d. Manual / Scraped Poetry (manual effort)
 Suggested sources:
 - **Kurdish Academy of Language** (kurdishacademy.org) — Sorani poems
 - **Chwarçêwe magazine** — Kurdish literary magazine
@@ -215,6 +245,7 @@ pip install -r requirements.txt
 
 # 2. Collect data
 python data/collect_opus.py
+python data/collect_pivot.py --n_pairs 5000   # pivot ckb↔en → ckb↔swe
 python data/generate_synthetic.py --n_poems 300
 
 # 3. Preprocess
