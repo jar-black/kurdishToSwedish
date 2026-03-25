@@ -49,7 +49,7 @@ def download_corpus(corpus: str, src_lang: str, tgt_lang: str, output_dir: Path)
             download_dir=str(corpus_dir),
             suppress_prompts=True,
         )
-        getter.fetch_files()
+        getter.get_files()
     except Exception as e:
         print(f"  Skipped {corpus}: {e}")
         return pairs
@@ -115,22 +115,31 @@ def download_flores200(output_dir: Path) -> list[dict]:
         print("datasets not installed, skipping FLORES-200. pip install datasets")
         return []
 
+    FLORES_IDS = [
+        ("openlanguagedata/flores_plus", "ckb_Arab", "swe_Latn"),
+        ("Muennighoff/flores200",        "ckb_Arab", "swe_Latn"),
+    ]
     print("Downloading FLORES-200 (ckb + swe)...")
     pairs = []
-    try:
-        ckb_ds = load_dataset("facebook/flores", "ckb_Arab", trust_remote_code=True)
-        swe_ds = load_dataset("facebook/flores", "swe_Latn", trust_remote_code=True)
-
-        for split in ("dev", "devtest"):
-            for ckb_row, swe_row in zip(ckb_ds[split], swe_ds[split]):
-                pairs.append({
-                    "ckb": ckb_row["sentence"],
-                    "swe": swe_row["sentence"],
-                    "source": f"FLORES-200-{split}",
-                })
-        print(f"  Collected {len(pairs):,} pairs from FLORES-200")
-    except Exception as e:
-        print(f"  FLORES-200 download failed: {e}")
+    for dataset_id, ckb_config, swe_config in FLORES_IDS:
+        try:
+            ckb_ds = load_dataset(dataset_id, ckb_config)
+            swe_ds = load_dataset(dataset_id, swe_config)
+            for split in ("dev", "devtest"):
+                if split not in ckb_ds or split not in swe_ds:
+                    continue
+                for ckb_row, swe_row in zip(ckb_ds[split], swe_ds[split]):
+                    sent_key = "sentence" if "sentence" in ckb_row else "text"
+                    pairs.append({
+                        "ckb": ckb_row[sent_key],
+                        "swe": swe_row[sent_key],
+                        "source": f"FLORES-200-{split}",
+                    })
+            if pairs:
+                print(f"  Collected {len(pairs):,} pairs from FLORES-200 ({dataset_id})")
+                break
+        except Exception as e:
+            print(f"  {dataset_id} failed: {e}")
 
     return pairs
 

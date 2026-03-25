@@ -76,7 +76,7 @@ def download_opus_ckb_en(corpora: list[str], output_dir: Path) -> list[dict]:
                 download_dir=str(corpus_dir),
                 suppress_prompts=True,
             )
-            getter.fetch_files()
+            getter.get_files()
         except Exception as e:
             print(f"  Skipped {corpus}: {e}")
             continue
@@ -103,30 +103,46 @@ def download_opus_ckb_en(corpora: list[str], output_dir: Path) -> list[dict]:
 
 
 def download_flores200_ckb_en(output_dir: Path) -> list[dict]:
-    """Download FLORES-200 ckb↔en from HuggingFace (reliable, ~1 000 pairs)."""
+    """
+    Download FLORES-200 ckb↔en from HuggingFace (~1 000 pairs).
+    Tries multiple dataset IDs in order of preference.
+    """
     try:
         from datasets import load_dataset
     except ImportError:
         print("datasets not installed, skipping FLORES-200. pip install datasets")
         return []
 
-    print("Downloading FLORES-200 (ckb↔en)...")
-    pairs = []
-    try:
-        ckb_ds = load_dataset("facebook/flores", "ckb_Arab", trust_remote_code=True)
-        en_ds = load_dataset("facebook/flores", "eng_Latn", trust_remote_code=True)
+    # Candidate dataset IDs (tried in order)
+    FLORES_IDS = [
+        ("openlanguagedata/flores_plus", "ckb_Arab", "eng_Latn"),
+        ("Muennighoff/flores200",        "ckb_Arab", "eng_Latn"),
+    ]
 
-        for split in ("dev", "devtest"):
-            for ckb_row, en_row in zip(ckb_ds[split], en_ds[split]):
-                pairs.append({
-                    "ckb": ckb_row["sentence"],
-                    "en": en_row["sentence"],
-                    "source": f"FLORES-200-{split}",
-                })
-        print(f"  Collected {len(pairs):,} pairs from FLORES-200 (ckb↔en)")
-    except Exception as e:
-        print(f"  FLORES-200 download failed: {e}")
-    return pairs
+    print("Downloading FLORES-200 (ckb↔en)...")
+    for dataset_id, ckb_config, en_config in FLORES_IDS:
+        try:
+            ckb_ds = load_dataset(dataset_id, ckb_config)
+            en_ds  = load_dataset(dataset_id, en_config)
+            pairs: list[dict] = []
+            for split in ("dev", "devtest"):
+                if split not in ckb_ds or split not in en_ds:
+                    continue
+                for ckb_row, en_row in zip(ckb_ds[split], en_ds[split]):
+                    sent_key = "sentence" if "sentence" in ckb_row else "text"
+                    pairs.append({
+                        "ckb": ckb_row[sent_key],
+                        "en":  en_row[sent_key],
+                        "source": f"FLORES-200-{split}",
+                    })
+            if pairs:
+                print(f"  Collected {len(pairs):,} pairs from FLORES-200 ({dataset_id})")
+                return pairs
+        except Exception as e:
+            print(f"  {dataset_id} failed: {e}")
+
+    print("  Could not download FLORES-200 from any source.")
+    return []
 
 
 # ── Pivot translation: en → swe via NLLB ──────────────────────────────────────
