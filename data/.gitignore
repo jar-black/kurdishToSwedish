@@ -1,0 +1,5 @@
+# Raw downloaded data — too large for version control
+raw/
+
+# Processed splits
+processed/
