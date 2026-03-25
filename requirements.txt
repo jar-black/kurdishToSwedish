@@ -1,0 +1,32 @@
+# Kurdish Sorani → Swedish Poetry Translation
+# Install with: pip install -r requirements.txt
+#
+# Prerequisites:
+#   CUDA 11.8 or 12.x
+#   Python 3.10+
+
+# Core ML
+torch>=2.1.0                  # Install CUDA-enabled version from pytorch.org
+transformers>=4.40.0
+datasets>=2.18.0
+accelerate>=0.28.0
+peft>=0.10.0                  # LoRA / QLoRA (Parameter-Efficient Fine-Tuning)
+bitsandbytes>=0.43.0          # 8-bit optimizer + optional 4-bit quantization
+
+# Evaluation metrics
+evaluate>=0.4.1
+sacrebleu>=2.4.0              # BLEU
+# chrF is included in sacrebleu; the 'evaluate' library loads it automatically
+
+# Data collection
+opustools>=1.6.0              # OPUS parallel corpus downloader
+
+# Anthropic SDK (for synthetic data generation)
+anthropic>=0.25.0
+
+# Config
+pyyaml>=6.0
+
+# Utilities
+tqdm>=4.66.0
+numpy>=1.24.0
